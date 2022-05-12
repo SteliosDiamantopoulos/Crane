@@ -12,7 +12,33 @@ import datetime
 import sympy as smp
 from tkinter import *
 import queue
+import cv2 as cv
+import qrcode
+from pyzbar.pyzbar import decode
 
+def create_order_ticket(orderID):
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=15,
+        border=5
+        )
+    data = ('BLAH '+str(orderID))
+    qr.add_data(data)
+    qr.make(fit=True)
+    img=qr.make_image(fill='black',back_color='white')
+    img.save('order.png')
+    
+def read_order_ticket():
+    img = cv.imread('order.png')  
+    for code in decode (img):
+       x=(code.data.decode('utf-8'))
+       numbers = []
+    for word in x.split():
+       if word.isdigit():
+          numbers.append(int(word))          
+   
+    return int(numbers[0])
 
 def createData():
     k=1
@@ -28,23 +54,24 @@ def createData():
     for i in range (5):
         for j in range (10):
             name = ''.join(random.choices(string.ascii_uppercase + string.digits, k = S))
-            data_config=[name, random.randint(3,6),i%5 ,j , round(random.randint(0,1)),round(random.randint(0,1)),round(random.randint(0,1)),random_date]
+            data_config=[name, random.randint(3,6),i%5 ,j , round(random.randint(0,1)),round(random.randint(0,1)),round(random.randint(0,1)),k]
             k=k+1
             dataset = dataset + [data_config]
       
     global df
-    df = pd.DataFrame(dataset, columns = ['OrderID', 'Weight(T)','PosX','PosY','Occupied','StaffIn','Alarm','Date'])   
+    df = pd.DataFrame(dataset, columns = ['OrderID', 'Weight(T)','PosX','PosY','Occupied','StaffIn','Alarm','UniqueID'])   
     df.to_csv(r'C:\Users\stdia\Desktop\CranePeoject\CraneDATA.csv', index = False)
     return df
 def mainDataset():
+    print(df)
     return df
 
 def maintnaceBlocks():
     #Print the Number And Location of the Blocks that staff are working on
     alarms=np.array(df['StaffIn'])
-    print((alarms))
+    
     no_alarms = 0
-    print (alarms[6])
+    
     alarm_pos = []
     for alarm in alarms:
         if alarm==1:
@@ -53,7 +80,7 @@ def maintnaceBlocks():
         if alarms[i] == 1:
             alarm_pos = alarm_pos+[i]
     print(alarm_pos)
-    print(len(alarm_pos),no_alarms)
+    #print(len(alarm_pos),no_alarms)
     return alarm_pos
 
     
@@ -74,15 +101,27 @@ def alarms():
     print(len(alarm_pos),no_alarms)
     return alarm_pos
 
+def pos_from_uniqueID(user_input):   
+    #Print the Number of alarms as well as the Location 
+    unID=np.array(df['UniqueID'])
+    rows=np.array(df['PosX'])
+    cols=np.array(df['PosY'])
+    list1 = unID.tolist()
+    pos = []
+    for i in range(len(list1)):
+        if user_input==list1[i]:
+            return (rows[i],cols[i])
+        
+
 def id_search(user_input):  
     orderID=np.array(df['OrderID'])
     list1 = orderID.tolist()
-    print(list1)
+    
     pos = []
     for i in range(len(list1)):
         if user_input==list1[i]:
             pos.append(i)
-    
+    print(pos)
     if len(pos)==0:
         print ("No such order Found")
     return (pos)
@@ -130,13 +169,13 @@ def openGrid():
     
     menu_frame.pack(fill = "x")
 
+    mainwindow.mainloop()
+
 def returnPos(index):
     return(button_list[index][1],button_list[index][2])
 def returnMass(index):
     mass=np.array(df['Weight(T)'])
     return(mass[index])    
-
-    mainwindow.mainloop()
 def gridOpener():
     mainwindow = Tk()
     mainFrame = Frame(mainwindow, bg="White")
@@ -166,6 +205,7 @@ def gridOpener():
     except NameError:
         return "NameError occurred. Some variable isn't defined."
     
+    mainwindow.mainloop()
 def createMaze2():
     rows=np.array(df['PosX'])
     cols=np.array(df['PosY'])
@@ -325,4 +365,5 @@ def PathFinding():
             put = add + j
             if valid(maze, put):
                 nums.put(put)
+
     
